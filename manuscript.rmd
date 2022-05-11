@@ -1,0 +1,606 @@
+---
+title             : "Parallel Acquisition of Uncorrelated Sequences Does Not Provide Firm Evidence for a Modular Sequence-learning System"
+shorttitle        : "Modularity in sequence learning"
+author: 
+  - name          : "Marius Barth"
+    affiliation   : ""
+    corresponding : yes
+    address       : "Herbert-Lewin-Str. 2, 50931 Köln"
+    email         : "marius.barth@uni-koeln.de" 
+  - name          : "Christoph Stahl"
+    email         : "christoph.stahl@uni-koeln.de"
+  - name          : "Hilde Haider"
+    email         : "hilde.haider@uni-koeln.de"
+affiliation:
+  - id            : ""
+    institution   : "University of Cologne"
+authornote: |
+  Marius Barth, Christoph Stahl, and Hilde Haider, Department of Psychology, University of Cologne.
+  This work was funded by Deutsche Forschungsgemeinschaft Grant BA-7059/1-1 to Marius Barth and Grant STA-1269/1-1 to Christoph Stahl.
+  Code and materials necessary to reproduce the analyses reported in this article are available at https://github.com/methexp/cpl-minerva.
+abstract: |
+  Dual-systems theories of sequence learning assume that sequence learning may proceed within a unidimensional learning system
+  that is immune to cross-dimensional interference because information is processed and represented in dimension-specific, encapsulated modules.
+  Important evidence for such modularity comes from studies investigating the absence or presence of interference between multiple
+  uncorrelated sequences (e.g., a sequence of color stimuli and a sequence of motor keypresses).
+  Here we question the premise that the parallel acquisition of uncorrelated sequences provides convincing evidence for a
+  modularized learning system.
+  In contrast, we demonstrate that parallel acquisition of multiple uncorrelated sequences is well predicted by a computational model
+  that assumes a single learning system with joint representations of stimulus and response features.
+  
+keywords          : "implicit learning, single-system and dual-systems models, encapsulated processing modules"
+wordcount         : "4,369"
+bibliography      : ["r-references.bib", "../methexp.bib"]
+floatsintext      : yes
+figurelist        : no
+tablelist         : no
+footnotelist      : no
+linenumbers       : no
+mask              : no
+draft             : no
+keep_md           : yes
+documentclass     : apa6
+classoption       : man
+output            : papaja::apa6_pdf
+---
+
+```{r libraries, include = FALSE}
+library(papaja)
+library(rtdists)
+r_refs("r-references.bib", append = FALSE)
+knitr::opts_knit$set(
+  global.par = TRUE
+  , verbose = F
+)
+```
+
+```{r analysis-preferences, include = FALSE}
+# Seed for random number generation
+set.seed(42L)
+knitr::opts_chunk$set(
+  warning   = FALSE
+  , message = FALSE
+  , echo = FALSE
+  , fig.width  = 11
+  , fig.height =  5
+)
+
+```
+
+```{r global-par}
+par(las = 1, font.main = 1, mfrow = c(1, 2))
+```
+
+The distinction between implicit and explicit learning is fundamental to theories of human learning.
+*Implicit* learning refers to learning that proceeds in the absence of awareness;
+*explicit* learning occurs when propositions are consciously formed about what is learned [@shanks_learning_2010].
+Important evidence supporting the distinction between implicit and explicit learning
+comes from work with the serial response time task [SRTT, @nissen_attentional_1987].
+In this task, subjects are instructed to respond to sequentially presented stimuli with a corresponding response;
+typically, the stimuli are symbols at different screen locations, and the responses to be made are keystrokes on a computer keyboard.
+If a stimulus appears at one of the possible locations, the subject is to respond with the corresponding key.
+The locations of the stimuli are not randomly selected, but follow an underlying sequence (e.g. 3--4--2--1--3--1--2--4).
+Subjects show accelerated responses and/or lower error rates in the course of task processing;
+these performance gains are greater for transitions that follow the sequence than for transitions in which the sequence is violated.
+After completing the SRTT, subjects' sequence knowledge is measured by some measure of explicit sequence knowledge.
+Importantly, subjects usually show no signs of explicit sequence knowledge.
+This simple dissociation between performance gains in the SRTT and subsequently recorded explicit sequence knowledge is considered to be one of the major pieces of evidence for the existence of implicit (in addition to explicit) learning processes.
+
+
+
+There is no consensus on whether these two observed forms of learning are also based on two different learning mechanisms or systems,
+or whether both phenomena may be explained with one general learning mechanism.
+@cleeremans_implicit_2002 assume that implicit and explicit sequence learning are based on a single learning system.
+Rather, they explain the dissociation between performance effects in the  SRTT and measures of explicit sequence knowledge
+by the fact that the measure of explicit sequence knowledge is less sensitive or reliable [@shanks_characteristics_1994; @timmermans_how_2015].
+
+<!-- Computational implementations of such an account have been proposed [@cleeremans_learning_1991]. -->
+<!-- @logan_toward_1988 proposed a formal model of learning... @logan_instance_2002 -->
+
+The assumption of a unitary system is opposed by the assumption of two systems.
+@keele_cognitive_2003 distinguish a unidimensional and a multidimensional learning system:
+In the multidimensional system, information of multiple *feature dimensions* can be processed together;
+the system is dependent on attention to protect it from overload.
+Processing in this system initially takes place automatically and without awareness, 
+but the information processed in the system is in principle accessible to consciousness.
+In the unidimensional system, by contrast, processing takes place in a series of *encapsulated, dimension-specific modules*.
+The system operates independently of attention -- it is only protected from overload because encapsulation and, hence,
+separate processing of stimulus and response features already protects the system from overload.
+Attributable to the strong separation of information, knowledge in this system is not accessible to consciousness [cf., ].
+The two systems thus differ in terms of their dependence on attention,
+their accessibility to consciousness,
+and the encapsulation of different information in specialized modules.
+
+In addition to the dissociation of implicit and explicit knowledge,
+previous studies investigated the influence of attention [e.g., @rowland_attention_2006] and the postulated encapsulation within the unidimensional system.
+As @keele_cognitive_2003 point out,
+important evidence for encapsulated processing comes from studies investigating interference between
+(1) learning of a sequence and a secondary task and
+(2) multiple sequences that may be learned in parallel.
+In the following, we focus on the parallel acquisition of multiple sequences,
+but the line of argument similarly applies to studies using a secondary task.
+
+<!-- The following presentation is primarily concerned with the parallel acquisition of multiple sequences, -->
+<!-- but might also inform research studying interference between sequence learning and a secondary task. -->
+
+Studies investigating such parallel acquisition repeatedly found evidence that parallel acquisition is indeed possible:
+In an early study by @mayr_spatial_1996,
+participants were instructed to discriminate between objects that were presented in different locations,
+where objects and locations followed two independent sequences.
+@mayr_spatial_1996 found learning of both sequences even for participants who were not aware of the sequences,
+and concluded that implicit learning "may be supported by several, distinct modules that are linked to different attentional subsystems and thus allow parallel acquisition of multiple, independent regularities".
+<!-- However, in Experiment 2, he found better learning of the object sequence in participants who were trained on both a spatial and an objects sequence compared to participants who were trained only on an object sequence. -->
+More recently, 
+@goschke_modularity_2012 found parallel acquisition of uncorrelated spatial-visual, spatial-motor, phonological and color sequences in a series of three experiments.
+Moreover, they also tested the effects of a secondary distractor task and found that a spatial distractor task selectively disrupted the acquisition of a spatial sequence,
+while adding a phonological distractor task selectively disrupted learning of a letter sequence.
+They interpreted both findings as evidence for modularization within a unidimensional learning system.
+^[
+@goschke_modularity_2012 additionally tested the independence of the learned representation using the bivariate correlation of the individual learning scores,
+formed as the difference of reaction times for regular and non-regular transitions -- recent work [@malejka_correlation_2021; @rouder_why_nodate] shows, however,
+that correlations of difference scores cannot be reliably estimated under the usual conditions in cognitive psychology (number of participants, number of trials per participant).
+Therefore, the zero correlation found by @goschke_modularity_2012 in their experiments cannot be interpreted.
+]
+@eberhardt_abstract_2017 and @haider_feature_2018 also found that multiple sequences can be learned in parallel;
+however, if the sequences overlap in an abstract feature dimension (for example, a visuo-spatial stimulus sequence and a motor-spatial response sequence), they cannot be learned in parallel.
+The authors concluded that interference occurs within a module that processes spatial features --
+encapsulation within the unidimensional learning system would be best described in terms of abstract feature dimensions.
+
+To summarize, these studies demonstrate that, if boundary conditions are met,
+participants are well able to learn multiple sequences in parallel.
+*Do these findings provide evidence for modularized processing, though?*
+
+The common rationale underlying the above studies is that parallel acquisition is possible only if
+the processing of both sequences occurs in a modularized fashion;
+if, instead, sequences were processed jointly, they could not be learned
+because *destructive interference* between sequences would eliminate learning.
+Accordingly, the above-presented studies tested whether above-zero learning can be found for both sequences.
+
+However, finding above-zero learning is not sufficient to conclude that no interference between sequences occurred:
+Instead, it is conceivable that the observed pattern of results may be the result of *incomplete destructive interference*,
+where learning of each sequence is hampered, but still strong enough to yield above-zero learning scores.
+Yet another alternative explanation might be *constructive* interference, where the parallel processing of one sequence may
+foster processing of the other, possibly by redundancies between features of sequences.
+We deem both alternative explanations well compatible with joint (i.e., non-encapsulated) processing of multiple sequences.
+Hence, finding above-zero learning scores for multiple sequences cannot be interpreted as evidence for a modularized sequence learning system.
+
+By contrast, if it was possible to demonstrate *absence of interference* between multiple sequences,
+such a finding would provide much more compelling evidence in favor of modularized processing.
+@mayr_spatial_1996 already acknowledged the problem 
+and therefore, in his Experiment 2, compared learning of both sequences in a dual-sequence condition (where both sequences were present) with learning under conditions where only one of the two possible sequences was present.
+He found that learning of the individual sequences was  *superior in the dual-sequence condition* compared to the single-sequence conditions.
+In our view,
+such a finding may be best attributable to constructive interference (not absence of interference),
+but there remain multiple possible explanations for such superadditivity [c.f., @shimamura_superadditive_2009].
+
+
+<!--
+Moreover, it is worth reminding that similar to sequence learning it has been argued in studies of working memory that the absence of interference between, for example, phonological and spatial information is indicative of encapsulated processing.
+However, more parsimonious models that assume non-encapsulated processing can explain the same findings,
+if the amount of interference is considered as a function of the (continuous) similarity of the processed information [e.g., @oberauer_interference_2016].
+@baddeley_working_2012
+-->
+
+## Aims of the present study
+
+The present study is aimed at demonstrating that 
+a computational model that assumes a unitary learning system with joint representations of stimulus and response features
+can predict the parallel acquisition of multiple uncorrelated sequences.
+Put differently, we aim to demonstrate that finding *incomplete* destructive interference between multiple sequences
+is not sufficient to preclude a single-system explanation of such parallel learning.
+
+For this purpose,
+we applied the memory model that @jamieson_applying_2009-2 developed for a standard SRTT (with a single motor sequence)
+to a study design with two uncorrelated sequences:
+It is assumed that features of the stimuli and response of each trial,
+together with the same information from the preceding trial, 
+are represented as another episode (another *instance*) in a single memory storage.
+In each trial, the current stimulus, in addition to stimulus and response of the preceding trial, serves as a *probe*;
+the similarity of this probe to all instances in the memory store determines the intensity and content of the memory *echo*,
+which then determines which response is executed.
+It is important to note that adding instances to such a memory storage is one possible way
+of mathematically describing the build-up of associations between the features that are represented in an instance;
+it is also mathematically equivalent to assuming changes in connectivity in a neural network [@kelly_memory_2017].
+Because we here assume that stimulus and response features are both stored in a single instance, we also assume 
+that associations between stimulus and response features are created and determine the memory output,
+which is antithetic to separate and encapsulated processing.
+
+
+# Method
+
+```{r}
+# message("A helpful message.")
+```
+
+```{r}
+# warning("A critical warning.")
+# warning("Another warnign from the same code chunk.")
+```
+
+`r # message("A message from in-line code.")`
+
+```{r sequence-independence, cache = TRUE, eval = FALSE}
+library(BayesFactor)
+all_data <- readRDS("data/single-storage-1000-7stimuli.rds")
+
+x <- all_data[[1L]]
+
+independence <- function(x, a = 1) {
+  x <- subset(x, trial > 1L)
+
+  list(
+    # bf_order_0 = NULL
+    # , bf_order_1 = NULL
+    bf_order_0 = extractBF(1/contingencyTableBF(
+      table(x$stimulus, x$location)
+      , sampleType = "jointMulti", priorConcentration = a
+    ), logbf = TRUE)
+    , bf_order_1 = extractBF(1/contingencyTableBF(
+      table(paste0(x$previous_stimulus, x$stimulus), paste0(x$previous_location, x$location))
+      , sampleType = "jointMulti", priorConcentration = a
+    ), logbf = TRUE)
+    , chisq_order_0 = chisq.test(table(x$stimulus, x$location))
+    , chisq_order_1 = chisq.test(table(paste0(x$previous_stimulus, x$stimulus), paste0(x$previous_location, x$location)))
+  )
+}
+flatten <- function(x) {
+  data.frame(
+    bf_order_0   = x$bf_order_0$bf
+    , bf_order_1 = x$bf_order_1$bf
+    , p_order_0  = x$chisq_order_0$p.value
+    , p_order_1  = x$chisq_order_1$p.value
+  )
+}
+
+independence_bfs <- lapply(all_data, independence, a = 10)
+independence_stats <- do.call("rbind", lapply(independence_bfs, flatten))
+mean(independence_stats$p_order_0 <= .05)
+mean(independence_stats$p_order_1 <= .05)
+
+range(independence_stats$bf_order_0)
+range(independence_stats$bf_order_1)
+
+```
+
+
+
+We simulated 1,000 data sets each comprising 40 participants who worked on six blocks (180 trials per block)
+of an SRTT procedure where stimuli followed a seven-item probabilistic sequence with 50% regular transitions (no direct repetitions).
+Responses followed a six-item probabilistic sequence with 50% regular transitions (no direct repetitions);
+both sequences were generated independently from each other.
+
+In such a design, parallel acquisition of both sequences can be tested by comparing response times (and error rates) for regular vs. non-regular stimuli and of regular vs. non-regular responses: Over learning blocks, responses should become fastest (error rates should become lowest) for trials with stimuli that follow the stimulus sequence, and also require a response that follows the response sequence.
+By contrast, responses should become slowest (error rates should become highest) for trials that violate both sequences (i.e., a non-regular stimulus presented, and the required response also violates the sequence of responses).
+For trials with regular stimuli but non-regular responses, or trials with non-regular stimuli but regular responses,
+performance should be in-between these two extremes.
+
+
+
+## Model specification
+
+The @jamieson_applying_2009-2 model is an application of @hintzman_minerva_1984's Minerva 2 model:
+Memory is represented as a matrix where each row (vector) consists of the information that is encoded in a single episode.
+For each episode, a new row is concatenated at the bottom of the memory matrix.
+
+To simulate the SRTT, we first constructed 13 vectors,
+seven to represent stimulus features (e.g., colors),
+and six to represent features of the motor responses.
+Each vector was of length 30 with features $x_j$ randomly drawn with $P(x_j = +1) = P(x_j = -1) = .5$.
+Vectors also fulfilled the additional constraint that pairwise similarities between two vectors
+(as measured by their vector cosine) were not larger than $.4$.
+We initialized memory with 200 pre-experimental traces where stimuli and responses
+were randomly chosen with equal probability (i.e., no sequential structure was present).
+For these initial memory traces and the study phase, we assumed a *learning rate* $L = .8$:
+Features were stored with a probability of .8 in memory. If a feature is not stored,
+its position in the memory vector is replaced with a zero.
+
+On a given trial $i$ of the SRTT, a memory-probe vector $\mathbf P$ is constructed by concatenating the
+vectors representing the currently-presented stimulus $\mathbf{S}_i$, the stimulus of the preceding trial $\mathbf{S}_{i-1}$, 
+and the motor response of the preceding trial $\mathbf{R}_{i-1}$.
+
+For each instance $i$ already stored in memory (i.e., for each row of the memory matrix $M$, $M_{i\cdot}$),
+its similarity $S_i$ with the probe vector is given by their vector cosine,
+
+<!-- $$S_i = \frac{1}{J} \sum_{j=1}^J P_j \times M_{ij}$$ -->
+$$S_i = \cos(\mathbf{P}, M_{i\cdot})$$
+
+The *activation* of each instance $i$ is then calculated as the cube of its similarity
+
+$$A_i = S_i^3$$
+
+<!-- When a participant responds to a given trial, we assume that they update their memory -->
+<!-- by adding $S_i//S_{i-1}//R_i//R_{i-1}$. -->
+<!-- Throughout the experiment, we assumed a learning rate of $L = .8$: -->
+<!-- if a vector element was not stored, its value was replaced with $0$. -->
+<!-- We initialized memory with 200 pre-experimental traces where stimuli and responses -->
+<!-- were randomly chosen with equal probability (i.e., no sequential structure was present). -->
+<!-- During the study phase, each probe is constructed from $S_{j}//S_{j-1}//R_{j-1}$, -->
+<!-- resulting in echo content $C$ and echo intensity $I$. -->
+
+
+Memory information is returned in the *echo*.
+The echo's *content* $\mathbf{C} = \{C_1, ..., C_J\}$ is the weighted sum of the traces stored in memory.
+For the $j$th feature, it is given by
+
+$$C_j = \sum_{i = 1}^I A_i \times M_{ij}$$
+
+The echo's *intensity* is the sum of the products of probe features and echo content.
+
+$$I = \sum_{j = 1}^J P_j \times C_j$$
+
+@jamieson_applying_2009-2 used an iterative-resonance model to simulate response times from
+Minerva's cued-recall mechanism.
+We replaced this mechanism because it makes unrealistic predictions for the SRTT:
+In an SRTT with deterministic sequences, it predicts perfect performance (i.e., no response errors);
+for an SRTT with probabilistic sequences, it predicts no errors for regular stimuli and
+only errors for non-regular stimuli.
+We, therefore, replaced the iterative-resonance part of the model with a drift-diffusion process that
+predicts more-plausible patterns of response times and error rates.
+For this purpose, we calculated, for each of the $k = 1, ..., K$ possible responses,
+the respective similarity between its vector representation $R_k$ and the current-response part of the echo content $\mathbf{C}^*$
+(i.e., the response-echo similarities) as the vector cosine plus 1, yielding an unsigned measure of similarity:
+
+$$1 + \cos(\mathbf{C}^*, \mathbf{R}_k) = 1 + \frac{\mathbf{C}^* \cdot \mathbf{R}_k}{\| \mathbf{C}^*\| \|\mathbf{R}_k\|}$$
+
+The response-echo similarity for the correct response is then divided by the sum of response-echo similarities of all possible responses $R_k, k = 1, ...K$,
+yielding the *signal-to-noise ratio* SNR:
+
+$$\mathrm{SNR} = \frac{1 + \cos (\mathbf{C}^*,\mathbf{R}_m)}{ \sum_{k = 1}^K 1 + \cos (\mathbf{C}^*, \mathbf{R}_k)}$$
+The product of echo intensity $I$ and signal-to-noise ratio $\mathrm{SNR}$ is
+fed into the drift-rate parameter $\delta$ of the diffusion model.
+The other parameters of this standard diffusion model
+(boundary separation $\alpha$, relative starting point $\beta$, and non-decision time $\tau$)
+were set to constant values.
+
+$$
+  (RT, R) \sim \mathrm{Wiener}(\alpha = 1.5, \beta = .2, \delta = \mathrm{max}(3, \mathrm{SNR} \times I), \tau = .3)
+$$
+If the drift-diffusion process terminated in the upper threshold,
+this was coded as a correct response (i.e., the response vector that belonged to the to-be-pressed response).
+If, instead, it hit the lower threshold, this was coded as an erroneous response and
+one of the five vectors that corresponded to incorrect responses was randomly chosen with equal probability.
+
+After the response was given,
+a new instance was added at the bottom of the memory matrix, containing
+the vectors representing current stimulus $\mathbf{S}_i$, the previous stimulus $\mathbf{S}_{i-1}$,
+the response given $\mathbf{R}_i$, and the response given on the previous trial $\mathbf{R}_{i-1}$.
+Features were stored with learning rate $L = .8$; if a feature was not stored in memory, its position
+in the memory vector was replaced with zero.
+
+
+# Results
+
+We used `r cite_r("r-references.bib")` for all simulations and analyses.
+All code and materials necessary to reproduce the manuscript and results are available from
+https://github.com/methexp/cpl-minerva.
+
+Learning of (probabilistic) sequences in an SRTT is typically tested by comparing response times and error rates for regular (i.e., sequenced) and non-regular trials across blocks.
+In an extended design with two independent sequences, we can distinguish four different trial types:
+(1) Both stimulus and response adhere to their respective sequences, (2) only the stimulus is regular, but a non-regular response is required, (3) only the response is regular, but a non-regular stimulus is presented, and (4) both stimulus and response do not follow their respective regularities.
+If both sequences are acquired, it should be possible to observe a performance advantage for trials that follow both sequences compared to trials that follow only one of the two sequences; moreover, trials that follow only one of the two sequences should still result in better performance compared to fully non-regular trials.
+By contrast, if it is not possible to learn both sequences in parallel, performance for all types of trials should be comparable (i.e., there should be no differences in performance between trial types).
+
+(ref:minerva-predictions) Response times and error rates from simulations. Left panel: Mean response times for non-error trials, averaged over simulations. Right panel: Proportion of erroneous responses, averaged over simulations. Error bars represent the average width of 95% within-subjects confidence intervals.
+
+
+```{r minerva-predictions, fig.cap = "(ref:minerva-predictions)", fig.env = "figure*"}
+par(mfrow = c(1, 2), las = 1, font.main = 1)
+
+# data <- readRDS("data/single-storage.rds")
+# 
+# apa_lineplot(
+#   data = subset(data, trial > 1L & !error)
+#   , dv = "rt"
+#   , id = "id"
+#   , factors = c("block", "regularity")
+#   , dispersion = wsci
+#   , ylim = c(0.350, 0.600)
+#   , args_legend = list(plot = FALSE)
+# )
+# 
+# apa_lineplot(
+#   data = subset(data, trial > 1L)
+#   , dv = "error"
+#   , id = "id"
+#   , factors = c("block", "regularity")
+#   , dispersion = wsci
+#   , ylim = c(0, .3)
+# )
+
+results <- readRDS("data/simulation-results-7stimuli.rds")
+
+papaja:::apa_factorial_plot_single(
+  aggregated = results$response_times
+  , y.values = results$response_times
+  , id = "id"
+  , dv = "estimate"
+  , factors = c("block", "regularity")
+  , ylim = c(0.4, .7)
+  , plot = c("points", "lines", "error_bars")
+  , xlab = "Block number"
+  , ylab = "Response time"
+  , args_legend = list(plot = FALSE)
+  , args_error_bars = list(length = .04)
+  , jit = .25
+)
+
+papaja:::apa_factorial_plot_single(
+  aggregated = results$error_rates
+  , y.values = results$error_rates
+  , id = "id"
+  , dv = "estimate"
+  , factors = c("block", "regularity")
+  , ylim = c(0, .4)
+  , plot = c("points", "lines", "error_bars")
+  , xlab = "Block number"
+  , ylab = "Error rate"
+  , args_legend = list(title = "Regularities")
+  , args_error_bars = list(length = .04)
+  , jit = .25
+)
+
+```
+
+Figure \@ref(fig:minerva-predictions) shows response times and error rates as predicted from our simulation model.
+Response times decrease over learning blocks:
+this performance gain is most pronounced for trials where both stimulus (color) and response (location) adhere to their respective sequence.
+For trials that violate both stimulus and response sequences, responses are slowest;
+for trials that follow only one of the two sequences, performance is in-between fully regular and fully non-regular trials.
+This pattern of results is mirrored in error rates: 
+Error rates decrease most for trials following both sequences and decrease least for trials that do not follow either sequence.
+Again, trials that follow only one of the two sequences indicate in-between performance.
+This pattern of results indicates that both sequences were learned by the model.
+
+
+# Discussion
+
+A core tenet of the dual-systems view [@keele_cognitive_2003] is that sequence learning may proceed
+in a unidimensional learning system where information is processed in encapsulated modules,
+with each module processing only a single dimension of information
+(i.e., a single feature dimension).
+As a consequence of such strong modularization, learning in this system is assumed to be immune to
+cross-dimensional interference.
+
+The parallel acquisition of multiple uncorrelated sequences is considered to provide crucial evidence for such
+encapsulated processing in an implicit learning system.
+However, such reasoning rests on the critical assumption that the parallel acquisition of sequences is not possible in a
+unitary learning system because destructive interference would eliminate learning.
+Here, we applied an instance model of sequence learning that assumes a unitary knowledge base of information
+and tested whether such a model can predict the parallel acquisition of multiple uncorrelated sequences. 
+We found that this is indeed the case,
+indicating that such parallel acquisition alone cannot provide decisive evidence for encapsulated learning in dimension-specific modules.
+
+
+## Limitations and open questions
+
+In this study, we did not directly address interference effects between sequence learning and
+a secondary distractor task.
+For instance, @goschke_modularity_2012 show in their Experiment 3 that interference
+is virtually complete if the distractor task is highly similar to sequence features
+(e.g., phonological distractor task for a letter sequence), but learning can be observed
+for a secondary sequence that is dissimilar to the distractor task (e.g., phonological
+distractor task and a sequence of spatial locations).
+There are two reasons why we think this finding is not problematic for the view presented here.
+First, the problem that finding above-zero learning can be explained not only by absence of interference,
+but also incomplete destructive interference, applies to this finding, too.
+Second, if learning proceeds in a unitary learning system, such a system is inevitably dependent on attention:
+a learning situation with attention diverted by a distractor task will evidently hamper learning,
+and interference will likely increase with sequence-distractor similarity---potentially because
+distractors are involuntarily encoded into memory at the position of the last item of the distractor-similar sequence
+[c.f., @oberauer_interference_2012].
+
+<!--
+This paragraph is based on a misunderstanding regarding Hilde's study:
+Moreover, the single-system account presented here does not provide a self-evident
+explanation for the pattern of *transfer effects* that has been found when participants
+initially learn a stimulus-location or a stimulus-color sequence and are then,
+in a transfer task, asked to provide motor responses that adhere to the sequential 
+structure  of the previously-learned stimulus sequence.
+In such a design, @haider_feature_2018 only found transfer from a stimulus-location sequence
+to the motor sequence, but not from a stimulus-color sequence to the motor sequence,
+suggesting that spatial (i.e., location) and color information are processed separately from  each other,
+hence impeding or prohibiting transfer from sequences of colors to sequences of spatial locations.
+This finding, however, might still be explained in terms of our single-system model if it is assumed that the task set [e.g., @dreisbach_how_2009; @haider_implicit_2014] determines what information is actively processed and stored in memory.
+To illustrate, imagine that presenting participants with a sequence of stimulus locations
+results in stimulus vectors $\mathbf{S}$ containing mostly spatial information (and only a small fraction of $\mathbf{S}$ representing other features of the stimulus)
+and that a sequence of stimulus colors results in different stimulus vectors that mostly represent color information.
+If participants are subsequently switched to a sequence of spatially ordered motor responses,
+response vectors that also represent a substantial chunk of spatial information might be more similar to, and hence result in higher activation of memory traces that also contain spatial information (in the location-sequence condition), while not (or substantially less) activating memory traces that largely contain color information (in the color-sequence condition).
+-->
+
+<!-- The single-system account presented here does not yet provide a self-evident -->
+
+From a theoretical perspective, arguably the most pressing question pertaining the single-system view is
+what determines the extent of interference between multiple sequences (or a sequence and a distractor task).
+An obvious candidate moderator is the degree of similarity between sequence features, but such a construct
+requires further specification [c.f.,  @guest_time_2011; @oberauer_interference_2016].
+Interestingly, this question is analogous to another question that arose in the context of the multiple-systems view:
+here, whether or not information is processed in the same or different modules is used to explain interference effects,
+and the critical question is what constitutes the dimensions along which processing modules are separated.
+It could be fruitful to get some inspiration from this line of research:
+Studies by Haider and colleagues [@eberhardt_abstract_2017; @haider_feature_2018]
+indicate that interference between multiple streams of information is not as much 
+a function of modality or whether stimuli or response sequences overlap -- instead,
+they find that abstract features, for instance, spatial vs. non-spatial information,
+determine whether interference occurs.
+Haider and colleagues explain these findings by assuming that the modules of the unidimensional
+learning are separated along such abstract feature dimensions.
+From a single-system perspective such as the one presented here, these findings
+may also be explained by more or less similarity between sequence features:
+For instance, two spatial sequences might be more similar to each other than a color and a spatial sequence,
+effectively leading to more interference.
+
+
+
+
+
+
+
+
+
+<!--
+
+Relate to inconsistent findings with regard to correlated/uncorrelated
+
+@meier_are_2010
+@meier_only_2012
+@kemeny_multimodal_2016
+@kemeny_multimodal_2016:
+
+> In general, the results suggest that correlated sequences are necessary for implicit sequence learning to occur. Moreover,
+they show that elements from different modalities can be automatically integrated into one unitary multimodal
+sequence.
+-->
+
+
+## Summary and outlook
+
+Previous research that aimed at testing the postulated modularization within a unidimensional learning system
+frequently followed the rationale that the parallel acquisition of multiple sequences is only possible
+if such modularization prevents (destructive) interference between sequences.
+However, finding above-zero learning for both sequences is insufficient to conclude that
+learning proceeded separately in a modularized fashion:
+If, instead, both sequences were processed jointly in a unitary learning system,
+and interference between sequences was only incomplete,
+it is still possible to find such above-zero learning.
+Here we demonstrated that an instance model of the SRTT that assumes a unitary representation of sequence information is indeed well able to predict the parallel acquisition of multiple uncorrelated sequences.
+
+By contrast, *absence of interference* is a much stronger empirical prediction deduced from the view that implicit learning proceeds in a strictly modularized sequence-learning system.
+Therefore, an obvious route for future research is to conduct empirical studies
+that directly assess whether or not learning of individual sequences under dual-sequence conditions is comparable to single-sequence conditions.
+If such studies were to find that interference is indeed absent under dual-sequence conditions,
+this would challenge the single-system explanation; it could only be reconciled with such a finding
+by imposing auxiliary assumptions, for instance, that under dual-task conditions higher task demands bolster attention and, consequently, learning.
+If, instead, such studies were to find only incomplete interference between sequences, the dual-systems view might be amended
+by assuming that the modules comprising the unidimensional system are not strictly separated,
+but are more interrelated  [c.f., @seger_implicit_1994], and are therefore also prone to interference between sequences.
+@eberhardt_abstract_2017 already realized conditions under which such absence of interference
+could be tested. In their Experiment 2, stimuli were presented in locations that followed a sequential structure;
+for some participants, stimulus colors adhered to another sequence, while for other participants, no additional sequence was present.
+Descriptively, learning of the stimulus-location sequence was comparable between these two conditions,
+suggesting that the color sequence indeed did not interfere with the location sequence.
+<!-- However, @eberhardt_abstract_2017 did not formally test whether learning scores were comparable; moreover, -->
+<!-- they did not test whether the color sequence had indeed been learned and therefore did not preclude that stimulus colors -->
+<!-- were altogether ignored. -->
+
+Another possible route is to expand on the study design utilized in Experiment 3 of @goschke_modularity_2012,
+where the authors manipulated the similarity of a distractor task with both sequences.
+There, they found that the extent to which a distractor task interfered with either sequence corresponded to its similarity with the respective sequence.
+While the above-presented argument renders this finding as not being conclusive evidence for modularization,
+such an experiment could be analyzed in a state-trace fashion [@dunn_discovering_1988; @stephens_disappearing_2019]:
+If the learning scores for both sequences followed a non-monotonic function of distractor-task similarity,
+this would indeed provide strong support for modularized processing,
+because the single-system view could not explain such two-dimensionality by increased task demands or attentional tuning under dual-sequence conditions.
+
+
+<!--
+The notion that similarity-based interference can explain why sometimes different streams of information do more or less interfere in either a non-encapsulated
+learning system or between highly interconnected processing modules also calls into question the fundamental distinction between the unidimensional and multidimensional learning that was proposed by @keele_cognitive_2003:
+-->
+
+
+
+# References
+
+<div id="refs" custom-style="Bibliography"></div>
+

@@ -1,0 +1,676 @@
+---
+author: "Marius Barth"
+date: "10 Dezember 2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, cache = FALSE, warning = FALSE, fig.width = 9)
+library(papaja)
+library(rtdists)
+if(!requireNamespace("JamiesonMewhort2009", quietly = TRUE)) {
+  credentials::set_github_pat()
+  remotes::install_github("mariusbarth/JamiesonMewhort2009", force = TRUE)
+}
+library(JamiesonMewhort2009)
+```
+
+```{r}
+n_stimuli <- 7L
+n_responses <- 6L
+
+
+# function for generating experimental setup
+generate_data <- function(){
+  # Be careful: In this chunk, I use "response" for the implied location that is
+  # imperative for response to be made
+  response_transitions <- matrix(0.5 / (n_responses - 2L), nrow = n_responses, ncol = n_responses)
+  stimulus_transitions <- matrix(0.5 / (n_stimuli - 2L), nrow = n_stimuli, ncol = n_stimuli)
+  
+  diag(response_transitions) <- 0
+  diag(stimulus_transitions) <- 0
+  
+  response_sequence <- rep(seq_len(n_responses), 2L)
+  stimulus_sequence <- rep(seq_len(n_stimuli), 2L)
+  
+  for(i in seq_len(n_responses)) {
+    response_transitions[response_sequence[i], response_sequence[i + 1]] <- .5
+  }
+  for (i in seq_len(n_stimuli)) {
+    stimulus_transitions[stimulus_sequence[i], stimulus_sequence[i + 1]] <- .5
+  }
+  
+  n_blocks <- 6L
+  n_trials_per_block <- 180L
+  N <- n_trials_per_block * n_blocks
+  
+  responses <- rep(NA, N)
+  stimuli <- rep(NA, N)
+  
+  responses[1] <- sample(seq_len(n_responses), 1)
+  stimuli[1] <- sample(seq_len(n_stimuli), 1)
+  
+  for (i in 2:N) {
+    responses[i] <- sample(seq_len(n_responses), size = 1, prob = response_transitions[responses[i-1], ])
+    stimuli[i] <- sample(seq_len(n_stimuli), size = 1, prob = stimulus_transitions[stimuli[i-1], ])
+  }
+  
+  get_regularity <- function(transitions, location, previous_location) {
+    regularity <- rep(NA_real_, length(location))
+    for(i in seq_along(location)) {
+      regularity[i] <- transitions[previous_location[i], location[i]] == .5
+    }
+    regularity
+  }
+  
+  # Here we remove the misnoma (see above)
+  as.data.frame(
+    tibble::tibble(
+      location = responses
+      , stimulus = stimuli
+      , previous_location = c(NA, responses[-N])
+      , previous_stimulus = c(NA, stimuli[-N])
+      , location_regularity = get_regularity(response_transitions, location, previous_location)
+      , stimulus_regularity = get_regularity(stimulus_transitions, stimulus, previous_stimulus)
+      , id = 1L
+      , block = rep(seq_len(n_blocks), each = n_trials_per_block)
+      , trial = seq_len(N)
+    )
+    , stringsAsFactors = FALSE
+  )
+}
+```
+
+```{r}
+n_subjects <- 40L
+set.seed(42L)
+```
+
+
+## Dual-systems model
+
+```{r eval= FALSE}
+all_data <- vector(mode = "list", length = n_subjects)
+
+print_vectors <- function(x, ...) {
+  UseMethod("p")
+}
+
+for (ind in seq_len(n_subjects)) {
+
+  data <- generate_data()
+
+  # What needs to be uncorrelated?
+  # table(data$stimulus_regularity, data$response_regularity)
+  # table(data$stimulus, data$response)
+  
+  
+  
+  
+  # instructions and 4 practice block (37 trials) were stored in memory
+  instruction <- data.frame(
+    "S" = rep(1:6, 6)
+    , "R" = rep(1:6, 6)
+    , "pR" = rep(1:6, each = 6)
+  )
+  
+  practice_blocks <- dplyr::bind_rows(instruction, instruction, instruction, instruction)
+  i <- 1
+
+
+
+for (i in unique(data$id)){
+  
+  # The whole set of stimulus materials
+  S <- data$stimulus[data$id == i]
+  L <- data$location[data$id == i]
+  pS <- data$previous_stimulus[data$id == i]
+  pL <- data$previous_location[data$id == i]
+
+  vectors <- construct_vectors(
+    features = c("stimulus", "location", "response")
+    , dimensionality = 30
+    , max_cor = .4
+  )
+  
+  # Two modality-sepecific systems
+  preexperimental_traces <- make_traces(
+    vectors
+    , L = .7
+    , stimulus = list(
+      sample(1:6, 200, replace = TRUE)
+      , sample(1:6, 200, replace = TRUE)
+    )
+    , response = list(
+      sample(1:6, 200, replace = TRUE)
+      , sample(1:6, 200, replace = TRUE)
+    )
+  )
+
+  visual_traces <- make_traces(
+    vectors
+    , stimulus = list(
+      pS
+      , S
+    )
+  )
+  
+  visual_traces <- rbind(
+    preexperimental_traces[, 1:60]
+    , visual_traces
+  )
+  
+  visual_probes <- make_traces(
+    vectors
+    , stimulus = list(
+      pS
+    )
+  )
+  
+  similarities <- make_similarities(
+    probes = visual_probes
+    , traces = visual_traces
+    , index_traces = 1:30
+    , preexperimental_traces = nrow(preexperimental_traces)
+  )
+  
+  activations <- abs(similarities^3) * sign(similarities)
+  # Echo content, a matrix,
+  # each row repesents the echo to probe i  
+  # each column represents feature j of the echo(es)
+  echo_content <- t(t(visual_traces) %*% t(activations))
+
+  # Echo intensity, a vector
+  # the i-th element represents echo intensty to probe i
+  echo_intensity <- as.double(rowMeans(visual_probes * echo_content[, 1:30]))
+  # response_intensity <- echo_content[, 41:60] %*% t(vectors$responses)/20
+  # response_echo_similarity <- response_intensity
+
+  #response-echo-similarity
+  # response_echo_similarity <- (echo_content[, 41:60] %*% t(vectors$responses))/20
+  stimulus_echo_similarity_M <- (echo_content[, 31:60] %*% t(vectors$stimulus) / outer(sqrt(rowSums(echo_content[, 31:60]^2)),sqrt(rowSums(vectors$stimulus^2))))
+  
+  data$stimulus_echo <- NA_real_
+  for (i in 1:nrow(data)) {
+    data$stimulus_echo[i] <- stimulus_echo_similarity_M[i, data$stimulus[i]]/sum(stimulus_echo_similarity_M[i, ])
+  }
+  
+  # obtain results from decision process
+  # purely perceptual learning may either not impact response selection at all,
+  # **or** the quality of information may be a bit higher for regular compared to nonregular stimuli?
+  tmp_i <- rtdists::rdiffusion(n = nrow(data), a = 1.5, v = 3, z = 1.5 * .2, t0 = 0)
+  
+  lower <- function(x) {
+    y <- rep(NA, length(x))
+    for (i in 1:length(x)) {
+      y[i] <- sample((1:6)[-x[i]], size = 1)
+    }
+    y
+  }
+  
+  data$dt <- tmp_i$rt
+  data$response <- ifelse(tmp_i$response == "upper", data$location, lower(data$location))
+  data$previous_response <- NA_integer_
+  data$previous_response[2:nrow(data)] <- data$response[seq_len(nrow(data) - 1L)]
+  
+  motor_traces <- make_traces(
+    vectors
+    , response = list(
+      data$previous_response
+      , data$response
+    )
+  )
+  
+  motor_traces <- rbind(
+    preexperimental_traces[, 61:120]
+    , motor_traces
+  )
+  
+  motor_probes <- make_traces(
+    vectors
+    , response = list(
+      data$previous_response
+    )
+  )
+  
+  motor_similarities <- make_similarities(
+    probes = motor_probes
+    , traces = motor_traces
+    , index_traces = 1:30
+    , preexperimental_traces = nrow(preexperimental_traces)
+  )
+  
+  motor_activations <- abs(motor_similarities^3) * sign(motor_similarities)
+  # Echo content, a matrix,
+  # each row repesents the echo to probe i
+  # each column represents feature j of the echo(es)
+  motor_echo_content <- t(t(motor_traces) %*% t(motor_activations))
+
+  # Echo intensity, a vector
+  # the i-th element represents echo intensty to probe i
+  motor_echo_intensity <- as.double(rowMeans(motor_probes * motor_echo_content[, 1:30]))
+  # response_intensity <- echo_content[, 41:60] %*% t(vectors$responses)/20
+  # response_echo_similarity <- response_intensity
+
+  #response-echo-similarity
+  # response_echo_similarity <- (echo_content[, 41:60] %*% t(vectors$responses))/20
+  response_echo_similarity_M <- (motor_echo_content[, 31:60] %*% t(vectors$response) / outer(sqrt(rowSums(motor_echo_content[, 31:60]^2)),sqrt(rowSums(vectors$response^2))))
+  
+  data$motor_echo <- NA_real_
+  for (i in 1:nrow(data)) {
+    data$motor_echo[i] <- response_echo_similarity_M[i, data$response[i]]/sum(response_echo_similarity_M[i, ])
+  }
+  
+  data$error <- data$location != data$response
+  data$response_regularity <- as.integer(((data$response - data$previous_response) == 1)|((data$response - data$previous_response) == -5))
+  
+}
+data$id <- ind
+all_data[[ind]] <- data
+}
+
+all_data <- do.call("rbind", all_data)
+all_data$t0 <- - all_data$motor_echo * .8 - all_data$stimulus_echo * .2 + .6
+all_data$xi <- all_data$motor_echo * .8
+all_data$rt <- all_data$dt + all_data$t0
+all_data$interaction <- interaction(all_data$stimulus_regularity, all_data$location_regularity)
+```
+
+```{r eval = FALSE}
+par(mfrow = c(1, 2))
+# Expected effects:
+apa_lineplot(data = all_data, id = "id", dv = "motor_echo", factors = c("block", "stimulus_regularity"))
+apa_lineplot(data = all_data, id = "id", dv = "stimulus_echo", factors = c("block", "stimulus_regularity"))
+
+apa_lineplot(data = all_data, id = "id", dv = "motor_echo", factors = c("block", "location_regularity"))
+apa_lineplot(data = all_data, id = "id", dv = "stimulus_echo", factors = c("block", "location_regularity"))
+
+apa_lineplot(data = all_data, id = "id", dv = "motor_echo", factors = c("block", "response_regularity"))
+apa_lineplot(data = all_data, id = "id", dv = "stimulus_echo", factors = c("block", "response_regularity"))
+```
+
+```{r eval = FALSE}
+par(mfrow = c(1, 1))
+apa_lineplot(data = all_data, id = "id", dv = "rt", factors = c("block", "stimulus_regularity", "error"))
+apa_lineplot(data = all_data, id = "id", dv = "rt", factors = c("block", "response_regularity", "error"))
+apa_lineplot(data = all_data, id = "id", dv = "rt", factors = c("block", "location_regularity", "error"))
+```
+
+```{r fig.cap = "RTs and error rates as predicted from separate-storage model.", eval = FALSE}
+par(mfrow = c(1, 2), las = 1)
+
+apa_lineplot(
+  data = all_data
+  , id = "id"
+  , dv = "rt"
+  , factors = c("block", "interaction")
+  , ylim = c(0.5, 0.8)
+  , args_legend = list(plot = FALSE)
+)
+
+apa_lineplot(
+  data = all_data
+  , id = "id"
+  , dv = "error"
+  , factors = c("block", "interaction")
+)
+```
+
+
+## Common-coding model
+
+```{r simulate-common-coding}
+# Common-coding model
+# In this instantiation, echo content and echo intensity drive drift rate
+# analyzing with the ddm, effects of learning sholuld only be evident for drift rate, not peripheral processes
+
+onesim <- function(x = NULL) {
+
+all_common <- vector(mode = "list", length = n_subjects)
+
+n_preexperimental <- 400L
+dimensionality <- 30
+learning_rate <- .8
+ind <- 1L
+
+for (ind in seq_along(all_common)) {
+
+  data <- generate_data()
+  data$similarity_j <- NA_real_
+  
+  vectors <- construct_vectors(
+    features = c("stimulus" = 7L, "response" = 6L)
+    , dimensionality = dimensionality
+    , max_cor = .4
+  )
+  
+  preexperimental_traces <- make_traces(
+    vectors
+    , L = learning_rate
+    , stimulus = list(
+      sample(seq_len(n_stimuli), n_preexperimental, replace = TRUE)
+      , sample(seq_len(n_stimuli), n_preexperimental, replace = TRUE)
+    )
+    , response = list(
+      sample(seq_len(n_responses), n_preexperimental, replace = TRUE)
+      , sample(seq_len(n_responses), n_preexperimental, replace = TRUE)
+    )
+  )
+  
+
+  common_traces <- preexperimental_traces
+  data$previous_response <- NA_integer_
+  data$response <- NA_integer_
+  
+  # We assume that the first response is correct
+  data$response[1L] <- data$location[1L]
+
+  i <- 2L
+  for (i in 2:nrow(data)) {
+    data$previous_response[i] <- data$response[i - 1L]
+    probe <- c(
+      vectors$stimulus[data$previous_stimulus[i], ]
+      , vectors$stimulus[data$stimulus[i], ]
+      , vectors$response[data$previous_response[i], ]
+    )
+    
+    probe_length <- length(probe)
+    
+    similarities <- probe %*% t(common_traces[, seq_len(probe_length)])/probe_length
+    activations <- similarities^3
+    
+    echo_content <- t(t(common_traces) %*% t(activations))
+    echo_intensity <- mean(activations)
+    # echo_intensity <- sum(activations)
+  
+    response_echo_similarity_M <- (echo_content[, probe_length + seq_len(dimensionality), drop = F] %*% t(vectors$response) /
+                                    outer(sqrt(rowSums(echo_content[, probe_length + seq_len(dimensionality), drop = FALSE]^2)), sqrt(rowSums(vectors$response^2))))
+
+    data$similarity_j[i] <- response_echo_similarity_M[data$location[i]]
+    data$snr[i] <- (response_echo_similarity_M[data$location[i]] + 1)/sum((response_echo_similarity_M + 1))
+    data$echo_intensity[i] <- echo_intensity
+    data$echo_intensity_sum[i] <- sum(activations)
+
+    # data$drift[i] <- max(3, data$snr[i] * data$echo_intensity_sum[i])
+    data$drift[i] <- data$snr[i] * data$echo_intensity_sum[i]
+    tmp_i <- rdiffusion(n = 1L, a = 1.5, v = max(3, data$drift[i]), t0 = .3, z = 1.5 * .2)
+    # tmp_i <- rLBA(n = 1L, b = 1.5, t0 = .300, A = 1.5 * .2, mean_v = exp(as.numeric(response_echo_similarity_M)), sd_v = 0, silent = TRUE)
+    
+    data$rt[i] <- tmp_i[["rt"]]
+    data$response[i] <- ifelse(
+      tmp_i$response == "upper"
+      , data$location[i]
+      , sample(seq_len(n_responses)[-data$location[i]])
+    )
+    
+
+    # data$response[i] <- which.max(response_echo_similarity_M)
+    
+
+    
+    common_traces <- rbind(
+      common_traces
+      , c(
+        probe * sample(0:1, replace = TRUE, size = length(probe), prob = c(1-learning_rate, learning_rate))
+        , make_traces(
+          vectors
+          , response = list(
+            data$response[i]
+          )
+          , L = learning_rate
+        )
+      )
+    )
+    class(common_traces) <- c("minerva_matrix", "matrix", "array")
+  }
+  data$id <- ind
+  all_common[[ind]] <- data
+  # print(ind)
+}
+
+all_common <- do.call("rbind", all_common)
+all_common$error <- all_common$response!=all_common$location
+all_common$interaction <- interaction(
+  factor(all_common$stimulus_regularity, levels = 1:0, labels = c("S-regulär", "S-irregulär"))
+  , factor(all_common$location_regularity, levels = 1:0, labels = c("R-regulär", "R-irregulär"))
+)
+all_common
+}
+
+all_common <- onesim()
+# with(data, scatter.smooth(echo_intensity ~ trial))
+# with(all_common, scatter.smooth(I_sum ~ trial))
+apa_lineplot(data = all_common, factors = c("block", "interaction"), dv = "echo_intensity_sum", id = "id")
+apa_lineplot(data = all_common, factors = c("block", "interaction"), dv = "echo_intensity", id = "id")
+apa_lineplot(data = all_common, factors = c("block", "interaction"), dv = "snr", id = "id")
+```
+
+
+```{r predictions-common-coding, fig.cap = "RTs and error rates as predicted from common-coding-model."}
+par(mfrow = c(1, 2), las = 1)
+
+variable_labels(all_common) <- c(block = "Block number", rt = "Response time", error = "Error rate")
+# saveRDS(all_common, file = "data/single-storage.rds")
+
+apa_lineplot(
+  data = all_common
+  , id = "id"
+  , dv = "rt"
+  , factors = c("block", "interaction")
+  , ylim = c(.3, .7)
+  , args_legend = list(plot = FALSE)
+)
+
+apa_lineplot(
+  data = all_common
+  , id = "id"
+  , dv = "error"
+  , factors = c("block", "interaction")
+  , args_legend = list(title = "")
+)
+```
+
+```{r eval = TRUE}
+performance <- microbenchmark::microbenchmark(
+  test <- onesim()
+  , times = 2L
+)
+
+130/60/60*1000/4 # seconds per sim /second-per-min / min-per-hour * replications / n_cores
+
+# do the same multiple times
+library(parallel)
+cl <- makeForkCluster(nnodes = 4L)
+parallel::clusterSetRNGStream(cl = cl, iseed = 42L)
+input <- vector(mode = "list", length = 1e3L)
+results <- clusterMap(
+  input
+  , fun = onesim
+  , cl = cl
+  , .scheduling = "dynamic"
+)
+stopCluster(cl)
+saveRDS(results, "data/single-storage-1000-7stimuli.rds")
+```
+
+```{r}
+results <- readRDS("data/single-storage-1000-7stimuli.rds")
+
+
+smart_aggregate <- function(x) {
+  merge(
+    aggregate(formula = rt ~ id + block + interaction, data = subset(x, trial > 1L & !error), FUN = mean)
+    , aggregate(formula = error ~ id + block + interaction, data = x, FUN = mean)
+    , sort = FALSE
+  )
+}
+
+agg_list <- lapply(
+  results
+  , FUN = smart_aggregate
+)
+
+rt_list <- lapply(
+  X = agg_list
+  , FUN = papaja::wsci
+  , id = "id"
+  , dv = "rt"
+  , factors = c("block", "interaction")
+)
+
+error_list <- lapply(
+  X = agg_list
+  , FUN = papaja::wsci
+  , id = "id"
+  , dv = "error"
+  , factors = c("block", "interaction")
+)
+
+means_with_ci <- function(x, dv, id, factors) {
+  df <- dplyr::bind_rows(x, .id = "replication")
+  ci_width <- aggregate(df[[dv]], by = df[, factors, drop = FALSE], FUN = mean)
+  colnames(ci_width) <- c(factors, "conf.int")
+  
+  means_df <- dplyr::bind_rows(lapply(x, summary), .id = "replication")
+  means_agg <- aggregate(x = means_df$mean, by = means_df[, factors, drop = FALSE], FUN = mean)
+  colnames(means_agg) <- c(factors, "estimate")
+  
+  agg <- merge(ci_width, means_agg, sort = FALSE)
+  agg
+}
+
+agg <- means_with_ci(rt_list, dv = "rt", id = "id", factors = c("block", "interaction"))
+agg_error <- means_with_ci(error_list, dv = "error", id = "id", factors = c("block", "interaction"))
+```
+
+
+
+```{r}
+par(las = 1, font.main = 1, mfrow = c(1, 2))
+
+agg$regularity <- factor(
+  agg$interaction
+  , levels = c("S-regulär.R-regulär", "S-irregulär.R-regulär", "S-regulär.R-irregulär", "S-irregulär.R-irregulär")
+  , labels = c("Both", "Responses only", "Stimuli only", "None")
+)
+tinylabels::variable_label(agg$regularity) <- "Regularities"
+
+agg$tendency <- agg$estimate
+agg$dispersion <- agg$conf.int
+
+agg_error$regularity <- factor(
+  agg_error$interaction
+  , levels = c("S-regulär.R-regulär", "S-irregulär.R-regulär", "S-regulär.R-irregulär", "S-irregulär.R-irregulär")
+  , labels = c("Both", "Responses only", "Stimuli only", "None")
+)
+tinylabels::variable_label(agg_error$regularity) <- "Regularities"
+
+agg_error$tendency <- agg_error$estimate
+agg_error$dispersion <- agg_error$conf.int
+
+papaja:::apa_factorial_plot_single(
+  aggregated = agg
+  , y.values = agg
+  , id = "id"
+  , dv = "estimate"
+  , factors = c("block", "regularity")
+  , ylim = c(0.3, .7)
+  , plot = c("points", "lines", "error_bars")
+  , xlab = "Block number"
+  , ylab = "Response time"
+)
+
+papaja:::apa_factorial_plot_single(
+  aggregated = agg_error
+  , y.values = agg_error
+  , id = "id"
+  , dv = "estimate"
+  , factors = c("block", "regularity")
+  , ylim = c(0, .5)
+  , plot = c("points", "lines", "error_bars")
+  , xlab = "Block number"
+  , ylab = "Error rate"
+)
+
+saveRDS(list(response_times = agg, error_rates = agg_error), "data/simulation-results-7stimuli.rds")
+```
+
+```{r}
+x <- results[[1L]]
+
+library(afex)
+
+standard_analysis <- function(x) {
+  aov_4(
+    formula = rt ~ (block * location_regularity * stimulus_regularity | id)
+    , data = subset(x, trial > 1 & !error)
+    , fun_aggregate = mean
+  )
+}
+
+anova_out <- lapply(results, standard_analysis)
+
+extract_ges <- function(x) {
+  x$anova_table[, "ges", drop = F]
+}
+
+ges <- as.data.frame(t(do.call("cbind", lapply(anova_out, extract_ges))))
+rownames(ges) <-  NULL
+
+densities <- lapply(ges, density, from = 0)
+
+
+
+names(densities)
+
+true_null <- c(
+  "location_regularity:stimulus_regularity"
+  , "block:location_regularity:stimulus_regularity"
+)
+
+main_effects <- c(
+  "block"
+  , "stimulus_regularity"
+  , "location_regularity"
+)
+
+sequence_specific <- c(
+  "block:stimulus_regularity"
+  , "block:location_regularity"
+)
+```
+
+```{r}
+par(mfrow = c(1, 3), font.main = 1)
+plot.new()
+plot.window(xlim = c(0, 1), ylim = c(0, 40))
+Map(densities[main_effects], col = seq_along(densities[main_effects]), f = lines)
+axis(side = 1)
+axis(side = 2)
+title(main = expression("Main effects"~italic(H)[0]))
+
+plot.new()
+plot.window(xlim = c(0, 1), ylim = c(0, 40))
+Map(densities[sequence_specific], col = seq_along(densities[sequence_specific]) + length(main_effects), f = lines)
+axis(side = 1)
+axis(side = 2)
+title(main = expression("Sequence-specific learning"~italic(H)[0]))
+
+plot.new()
+plot.window(xlim = c(0, 1), ylim = c(0, 40))
+Map(densities[true_null], col = seq_along(densities[true_null]) + length(main_effects) + length(sequence_specific), f = lines)
+axis(side = 1)
+axis(side = 2)
+title(main = expression("True"~italic(H)[0]))
+
+legend(
+  legend = c(main_effects, sequence_specific, true_null)
+  , col = seq_along(densities)
+  , x = "topright"
+  , bty = "n"
+)
+```
+
+
