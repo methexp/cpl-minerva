@@ -52,6 +52,7 @@ knitr::opts_knit$set(
   global.par = TRUE
   , verbose = F
 )
+knitr::opts_chunk$set(dpi = 600)
 ```
 
 ```{r analysis-preferences, include = FALSE}
